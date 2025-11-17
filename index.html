@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI 英语趣味学习</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f9f9fb;
+      color: #333;
+    }
+    h1 { text-align: center; margin-bottom: 30px; }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin: 12px 0 6px;
+      font-weight: 600;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    button {
+      background: #4f46e5;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: background 0.2s;
+    }
+    button:hover { background: #4338ca; }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    #dialogue {
+      line-height: 1.6;
+      background: #f0f4ff;
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+    .dialog-line {
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px dashed #cbd5e1;
+    }
+    .dialog-line:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    .speaker {
+      font-weight: bold;
+      color: #4f46e5;
+      margin-bottom: 4px;
+    }
+    .english {
+      font-size: 17px;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .chinese {
+      color: #4a5568;
+      font-style: italic;
+    }
+    .hidden { display: none; }
+    .error { color: #e11d48; margin-top: 8px; }
+
+    /* 可点击单词样式 */
+    .clickable-word {
+      cursor: pointer;
+      text-decoration: underline;
+      color: #2563eb;
+      background: none !important;
+      border: none;
+      padding: 0;
+      font: inherit;
+      outline: none;
+    }
+    .clickable-word:hover {
+      color: #1d4ed8;
+    }
+    .loading-word {
+      opacity: 0.6;
+    }
+
+    /* 播放按钮样式 */
+    .play-btn {
+      background: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #7dd3fc;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    .play-btn:hover {
+      background: #bae6fd;
+    }
+
+    /* 自定义弹窗 */
+    #custom-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+    }
+    #custom-modal.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      max-width: 90%;
+      width: 400px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      position: relative;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .modal-title {
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .close-modal {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: #94a3b8;
+    }
+    .modal-body {
+      line-height: 1.6;
+      color: #334155;
+    }
+  </style>
+</head>
+<body>
+  <h1>🤖 AI 英语趣味学习</h1>
+
+  <div class="card">
+    <h2>⚙️ 配置 AI（只需一次）</h2>
+    <label for="apiKey">API Key *</label>
+    <input type="password" id="apiKey" placeholder="例如：sk-xxx 或你的服务密钥">
+
+    <label for="baseUrl">Base URL *</label>
+    <input type="url" id="baseUrl" placeholder="例如：https://api.openai.com/v1 或 https://openrouter.ai/api/v1">
+
+    <label for="modelName">模型名称 *</label>
+    <input type="text" id="modelName" placeholder="例如：gpt-4o, claude-3.5-sonnet, llama3:8b">
+
+    <button onclick="saveConfig()">💾 保存配置</button>
+    <div id="configStatus" class="hidden"></div>
+  </div>
+
+  <div class="card">
+    <h2>📚 开始学习</h2>
+    <label for="sceneSelect">选择常用场景：</label>
+    <select id="sceneSelect">
+      <option value="random">🎲 随机场景</option>
+      <option value="restaurant">🍽️ 餐厅点餐</option>
+      <option value="hotel">🏨 酒店入住</option>
+      <option value="airport">✈️ 机场值机</option>
+      <option value="shopping">🛍️ 购物砍价</option>
+      <option value="doctor">🏥 看病问诊</option>
+      <option value="job_interview">💼 求职面试</option>
+      <option value="travel">🌍 旅行问路</option>
+      <option value="casual_chat">💬 日常闲聊</option>
+    </select>
+    <p>点击按钮，基于所选场景生成一段多轮实用对话（含中英对照）！</p>
+    <button onclick="startLearning()" id="learnBtn">🚀 生成趣味对话</button>
+    <div id="error" class="error hidden"></div>
+    <div id="dialogue"></div>
+  </div>
+
+  <!-- 自定义弹窗 -->
+  <div id="custom-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">单词释义</div>
+        <button class="close-modal" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    // 从 localStorage 加载配置
+    function loadConfig() {
+      const apiKey = localStorage.getItem('aiApiKey');
+      const baseUrl = localStorage.getItem('aiBaseUrl');
+      const modelName = localStorage.getItem('aiModelName');
+      if (apiKey) document.getElementById('apiKey').value = apiKey;
+      if (baseUrl) document.getElementById('baseUrl').value = baseUrl;
+      if (modelName) document.getElementById('modelName').value = modelName;
+    }
+
+    // 保存配置到 localStorage
+    function saveConfig() {
+      const apiKey = document.getElementById('apiKey').value.trim();
+      const baseUrl = document.getElementById('baseUrl').value.trim();
+      const modelName = document.getElementById('modelName').value.trim();
+
+      if (!apiKey || !baseUrl || !modelName) {
+        alert('请填写所有配置项！');
+        return;
+      }
+
+      localStorage.setItem('aiApiKey', apiKey);
+      localStorage.setItem('aiBaseUrl', baseUrl);
+      localStorage.setItem('aiModelName', modelName);
+
+      const statusEl = document.getElementById('configStatus');
+      statusEl.textContent = '✅ 配置已保存！';
+      statusEl.classList.remove('hidden');
+      setTimeout(() => statusEl.classList.add('hidden'), 3000);
+    }
+
+    // 获取用户选择的场景（支持 random）
+    function getSelectedScene() {
+      const selected = document.getElementById('sceneSelect').value;
+      if (selected === 'random') {
+        const scenes = Object.keys(SCENE_DESCRIPTIONS);
+        const randomIndex = Math.floor(Math.random() * scenes.length);
+        return scenes[randomIndex];
+      }
+      return selected;
+    }
+
+    // 场景描述映射（用于提示词）
+    const SCENE_DESCRIPTIONS = {
+      restaurant: "在餐厅点餐、询问菜品、结账等",
+      hotel: "在酒店办理入住、询问设施、退房等",
+      airport: "在机场办理登机、托运行李、询问航班信息等",
+      shopping: "在商店购物、询问价格、讨价还价、退换货等",
+      doctor: "在诊所或医院描述症状、询问治疗方案、拿药等",
+      job_interview: "求职面试中的自我介绍、回答问题、提问环节等",
+      travel: "在街头或景点问路、询问交通、推荐地点等",
+      casual_chat: "朋友之间的日常聊天，如天气、爱好、近况等"
+    };
+
+    // 调用 AI 生成对话（多轮 + 中英对照）
+    async function generateDialogue(sceneKey) {
+      const apiKey = localStorage.getItem('aiApiKey');
+      const baseUrl = localStorage.getItem('aiBaseUrl');
+      const modelName = localStorage.getItem('aiModelName');
+
+      if (!apiKey || !baseUrl || !modelName) {
+        throw new Error('请先在上方配置 AI 参数！');
+      }
+
+      const sceneDesc = SCENE_DESCRIPTIONS[sceneKey] || "日常生活场景";
+
+      const prompt = `You are a JSON generator. Output ONLY valid JSON, no explanations, no markdown, no extra text.
+
+Create a natural and practical multi-turn dialogue (4-6 exchanges) between two people in the following scenario:
+"${sceneDesc}"
+
+Rules:
+- Make it realistic and useful for English learners.
+- Include common phrases and expressions for this situation.
+- Output EXACTLY in this JSON format:
+{"dialogue":[{"speaker":"Person A","english":"English text","chinese":"Chinese translation"},{"speaker":"Person B","english":"...","chinese":"..."}]}
+- Do not output anything before or after the JSON.`;
+
+      const response = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: modelName,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+          max_tokens: 600
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('AI API Error:', errorText);
+        throw new Error(`AI 请求失败: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      let content = data.choices[0].message.content.trim();
+
+      content = content
+        .replace(/^[^{]*({.*})[^}]*$/s, '$1')
+        .replace(/```json?\s*/gi, '')
+        .replace(/```/g, '')
+        .trim();
+
+      try {
+        const result = JSON.parse(content);
+        if (!Array.isArray(result.dialogue)) {
+          throw new Error('Invalid dialogue format');
+        }
+        return result.dialogue;
+      } catch (e) {
+        console.error('Failed to parse AI response as JSON:', content);
+        throw new Error('AI 返回格式错误，请尝试更强模型（如 gpt-4o）');
+      }
+    }
+
+    // 使用 AI 翻译单个单词
+    async function translateWord(word) {
+      const apiKey = localStorage.getItem('aiApiKey');
+      const baseUrl = localStorage.getItem('aiBaseUrl');
+      const modelName = localStorage.getItem('aiModelName');
+
+      if (!apiKey || !baseUrl || !modelName) {
+        throw new Error('请先配置 AI 参数！');
+      }
+
+      const prompt = `Translate the following English word or short phrase into Chinese. Only output the Chinese translation, nothing else: "${word}"`;
+
+      const response = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: modelName,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.1,
+          max_tokens: 20
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`翻译请求失败: ${response.status}`);
+      }
+
+      const data = await response.json();
+      let translation = data.choices[0].message.content.trim();
+      translation = translation.replace(/^["']|["']$/g, '').trim();
+      return translation || '（无结果）';
+    }
+
+    // 文字转语音（使用 Web Speech API）
+    function speakText(text) {
+      if ('speechSynthesis' in window) {
+        // 取消当前朗读
+        speechSynthesis.cancel();
+        // 创建语音对象
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        speechSynthesis.speak(utterance);
+      } else {
+        showModal('⚠️ 当前浏览器不支持语音播放功能。');
+      }
+    }
+
+    // 显示自定义弹窗
+    function showModal(message) {
+      document.getElementById('modal-body').innerHTML = message;
+      document.getElementById('custom-modal').classList.add('active');
+    }
+
+    // 关闭弹窗
+    function closeModal() {
+      document.getElementById('custom-modal').classList.remove('active');
+    }
+
+    // 点击遮罩关闭
+    document.getElementById('custom-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'custom-modal') {
+        closeModal();
+      }
+    });
+
+    // 将英文句子拆分为可点击单词（正确保留空格和标点）
+    function makeWordsClickable(englishText) {
+      const tokens = englishText.split(/(\s+|\b[\w'-]+\b)/).filter(token => token !== '');
+      let html = '';
+      for (const token of tokens) {
+        if (/^\s+$/.test(token)) {
+          html += token;
+        } else if (/[\w'-]/.test(token)) {
+          html += `<span class="clickable-word" data-word="${token}">${token}</span>`;
+        } else {
+          html += token;
+        }
+      }
+      return html;
+    }
+
+    // 渲染对话（带可点击单词和播放按钮）
+    function renderDialogue(dialogue) {
+      const dialogueEl = document.getElementById('dialogue');
+      let html = '';
+
+      dialogue.forEach(line => {
+        const clickableEnglish = makeWordsClickable(line.english);
+        html += `
+          <div class="dialog-line">
+            <div class="speaker">${line.speaker}:</div>
+            <div class="english">
+              ${clickableEnglish}
+              <button class="play-btn" onclick="speakText('${line.english.replace(/'/g, "\\'")}')">▶</button>
+            </div>
+            <div class="chinese">${line.chinese}</div>
+          </div>
+        `;
+      });
+
+      dialogueEl.innerHTML = html;
+
+      // 事件委托：点击单词触发 AI 翻译
+      dialogueEl.addEventListener('click', async (e) => {
+        if (e.target.classList.contains('clickable-word')) {
+          const word = e.target.getAttribute('data-word');
+          const originalText = e.target.textContent;
+
+          if (e.target.classList.contains('loading-word')) return;
+
+          e.target.classList.add('loading-word');
+          e.target.textContent = '⋯';
+
+          try {
+            const translation = await translateWord(word);
+            showModal(`<strong>"${originalText}"</strong> 的意思是：<br><br>${translation}`);
+          } catch (err) {
+            showModal(`翻译失败：<br>${err.message}`);
+          } finally {
+            e.target.classList.remove('loading-word');
+            e.target.textContent = originalText;
+          }
+        }
+      });
+    }
+
+    // 主学习流程
+    async function startLearning() {
+      const btn = document.getElementById('learnBtn');
+      const errorEl = document.getElementById('error');
+      const dialogueEl = document.getElementById('dialogue');
+
+      btn.disabled = true;
+      errorEl.classList.add('hidden');
+      dialogueEl.innerHTML = '<div style="text-align:center; padding:20px;">🧠 正在生成多轮实用对话（含中英对照）...</div>';
+
+      try {
+        const scene = getSelectedScene();
+        const dialogue = await generateDialogue(scene);
+        renderDialogue(dialogue);
+      } catch (err) {
+        errorEl.textContent = `❌ 错误: ${err.message}`;
+        errorEl.classList.remove('hidden');
+        dialogueEl.innerHTML = '';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // 页面加载时恢复配置
+    window.addEventListener('DOMContentLoaded', loadConfig);
+  </script>
+</body>
+</html>
